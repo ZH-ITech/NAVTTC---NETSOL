@@ -1,0 +1,563 @@
+
+
+# Customer Feedback Intelligence
+
+
+
+A Python and Flask-based application that transforms customer reviews into structured feedback insights using Natural Language Processing (NLP).
+
+
+
+This project includes two versions, progressing from individual review analysis to a dataset-driven customer feedback dashboard.
+
+
+
+## Project Versions
+
+
+
+### V1 - Single Review Analysis
+
+
+
+The original application focuses on analysing individual customer reviews.
+
+
+
+Features:
+
+- Individual customer review analysis.
+
+- Sentiment detection using VADER.
+
+- Key phrase extraction using YAKE.
+
+- Rule-based complaint category detection.
+
+- Review text validation.
+
+- Flask web interface.
+
+- Application health-check endpoint.
+
+
+
+### V2 - Customer Feedback Intelligence Dashboard
+
+
+
+The enhanced version introduces dataset-level feedback analysis.
+
+
+
+Features:
+
+- Upload customer feedback datasets in CSV format.
+
+- Analyse the included sample dataset.
+
+- Validate CSV structure and input data.
+
+- Process multiple customer reviews.
+
+- Calculate key performance indicators (KPIs).
+
+- Display analysis results and charts.
+
+- Show data-processing warnings.
+
+- Export analysed results to CSV.
+
+- Analyse individual reviews.
+
+- Application health-check endpoint.
+
+- Configurable upload, row-count, and review-length limits.
+
+
+
+## Technology Stack
+
+
+
+| Technology | Purpose |
+
+|---|---|
+
+| Python | Core application development |
+
+| Flask | Web application framework |
+
+| Pandas | Data processing and analysis |
+
+| VADER Sentiment | Sentiment analysis |
+
+| YAKE | Keyword extraction |
+
+| NumPy | Numerical operations |
+
+| Jinja2 | HTML template rendering |
+
+| python-dotenv | Environment configuration |
+
+| HTML / CSS | User interface |
+
+
+
+## Project Structure
+
+
+
+```text
+
+CustomerFeedbackApp\_Final/
+
+|
+
+|-- README.md
+
+|-- .gitignore
+
+|
+
+|-- V1/
+
+|   |-- app.py
+
+|   |-- analysis.py
+
+|   |-- categories.py
+
+|   |-- config.py
+
+|   |-- nlp\_backends.py
+
+|   |-- requirements.txt
+
+|   |-- .env.example
+
+|   |-- smoke\_test\_nlp.py
+
+|   |-- data/
+
+|   |   `-- sample\_feedback.csv
+
+|   `-- templates/
+
+|       `-- index.html
+
+|
+
+`-- V2/
+
+&#x20;   |-- app.py
+
+&#x20;   |-- analysis.py
+
+&#x20;   |-- categories.py
+
+&#x20;   |-- config.py
+
+&#x20;   |-- data\_loader.py
+
+&#x20;   |-- kpis.py
+
+&#x20;   |-- nlp\_backends.py
+
+&#x20;   |-- pipeline.py
+
+&#x20;   |-- requirements.txt
+
+&#x20;   |-- .env.example
+
+&#x20;   |-- smoke\_test\_nlp.py
+
+&#x20;   |-- smoke\_test\_v2\_app.py
+
+&#x20;   |-- smoke\_test\_v2\_data.py
+
+&#x20;   |-- data/
+
+&#x20;   |   `-- sample\_feedback.csv
+
+&#x20;   `-- templates/
+
+&#x20;       |-- base.html
+
+&#x20;       |-- index.html
+
+&#x20;       `-- results.html
+
+```
+
+
+
+## Requirements
+
+
+
+- Windows, Linux, or macOS.
+
+- Python 3.10 or later recommended.
+
+- pip package manager.
+
+- Modern web browser.
+
+
+
+Each version has its own `requirements.txt` and environment configuration.
+
+
+
+## Installation and Setup
+
+
+
+### 1. Navigate to V2
+
+
+
+```powershell
+
+cd "CustomerFeedbackApp\_Final\\V2"
+
+```
+
+
+
+### 2. Create a virtual environment
+
+
+
+```powershell
+
+python -m venv .venv
+
+```
+
+
+
+### 3. Activate the environment
+
+
+
+```powershell
+
+.\\.venv\\Scripts\\Activate.ps1
+
+```
+
+
+
+### 4. Install dependencies
+
+
+
+```powershell
+
+python -m pip install --upgrade pip
+
+pip install -r requirements.txt
+
+```
+
+
+
+### 5. Configure environment variables
+
+
+
+```powershell
+
+Copy-Item .env.example .env
+
+```
+
+
+
+Default V2 configuration:
+
+
+
+| Variable | Example value | Purpose |
+
+|---|---:|---|
+
+| FLASK\_DEBUG | 1 | Flask debug setting |
+
+| MAX\_UPLOAD\_MB | 5 | Maximum upload size |
+
+| MAX\_ROWS | 2000 | Maximum CSV data rows |
+
+| MIN\_REVIEW\_CHARS | 3 | Minimum review length |
+
+| MAX\_REVIEW\_CHARS | 1000 | Maximum review length |
+
+
+
+Adjust these settings in `.env` when necessary.
+
+
+
+Do not commit private environment files or secrets.
+
+
+
+## Running the Application
+
+
+
+Run V2 from its project directory:
+
+
+
+```powershell
+
+python app.py
+
+```
+
+
+
+Open the dashboard:
+
+
+
+http://127.0.0.1:5000
+
+
+
+Health-check endpoint:
+
+
+
+http://127.0.0.1:5000/health
+
+
+
+### Running V1
+
+
+
+Stop the V2 application first, then open another PowerShell terminal:
+
+
+
+```powershell
+
+cd "CustomerFeedbackApp\_Final\\V1"
+
+python -m venv .venv
+
+.\\.venv\\Scripts\\Activate.ps1
+
+python -m pip install --upgrade pip
+
+pip install -r requirements.txt
+
+Copy-Item .env.example .env
+
+python app.py
+
+```
+
+
+
+Open:
+
+
+
+http://127.0.0.1:5000
+
+
+
+*\*Important:\*\* Both versions use port 5000 by default. Run them separately unless you change the port configuration.
+
+
+
+## Using the V2 Dashboard
+
+
+
+1\. Start the Flask application.
+
+2\. Open the dashboard in your browser.
+
+3\. Select the bundled sample dataset or upload a CSV file.
+
+4\. Select an available sentiment analysis backend.
+
+5\. Submit the dataset for analysis.
+
+6\. Review the KPIs, charts, results, and processing messages.
+
+7\. Download the analysed results as a CSV file.
+
+
+
+## CSV Input Format
+
+
+
+V2 requires these three columns:
+
+
+
+| Column | Description |
+
+|---|---|
+
+| customer\_id | Customer identifier |
+
+| product | Product associated with the feedback |
+
+| feedback | Customer review or comment |
+
+
+
+Example:
+
+
+
+```csv
+
+customer\_id,product,feedback
+
+C001,Laptop,"Excellent laptop, very fast and reliable."
+
+C002,Mobile,"The battery drains very quickly."
+
+C003,Headphones,"Amazing sound quality and comfortable."
+
+C004,Laptop,"Delivery was delayed by four days."
+
+```
+
+
+
+Sample dataset:
+
+
+
+`V2/data/sample\_feedback.csv`
+
+
+
+Input handling includes:
+
+- CSV header normalisation.
+
+- UTF-8 and CP1252 encoding support.
+
+- Comma-separated and semicolon-separated input.
+
+- Empty feedback removal.
+
+- Missing product and customer ID handling.
+
+- Duplicate customer ID warnings.
+
+- Configurable maximum row count.
+
+
+
+## Testing
+
+
+
+Run the following commands from the relevant version directory.
+
+
+
+### V1 Tests
+
+
+
+```powershell
+
+python smoke\_test\_nlp.py
+
+```
+
+
+
+### V2 Tests
+
+
+
+```powershell
+
+python smoke\_test\_nlp.py
+
+python smoke\_test\_v2\_data.py
+
+python smoke\_test\_v2\_app.py
+
+```
+
+
+
+These scripts cover NLP functionality, CSV data handling, and application behaviour.
+
+
+
+## Implementation Notes and Limitations
+
+
+
+- VADER is primarily designed for English-language sentiment analysis. Non-English results should be interpreted cautiously.
+
+- Complaint categories are identified using predefined keyword rules and may not recognise every expression or context.
+
+- Automated sentiment results are indicators, not definitive measures of customer satisfaction.
+
+- V2 stores analysis results in application memory. Results may become unavailable after the server restarts.
+
+- Flask debug mode is intended for local development and should be disabled in production.
+
+- Avoid uploading sensitive personal information in demonstration datasets.
+
+
+
+## Future Improvements
+
+
+
+Potential enhancements include:
+
+
+
+- Advanced multilingual sentiment analysis.
+
+- Improved complaint classification.
+
+- Persistent storage of analysis history.
+
+- User authentication and role-based access.
+
+- Additional dashboard filters and reporting.
+
+- Production deployment and monitoring.
+
+- Performance testing with larger datasets.
+
+
+
+## GitHub Repository
+
+
+
+https://github.com/ZH-ITech/NAVTTC---NETSOL
+
+
+
+## Project Purpose
+
+
+
+This project demonstrates practical Python development, NLP integration, CSV data processing, Flask application development, and the evolution of a single-review analysis tool into a structured customer feedback intelligence dashboard.
+
+
+
+

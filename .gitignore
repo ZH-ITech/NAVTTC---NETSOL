@@ -43,3 +43,10 @@ desktop.ini
 
 # Customer Feedback Intelligence V2 temporary test data
 Week-12/D1 Monday 16-11-2026/CustomerFeedbackApp/V2/data/test_messy.csv
+
+# Extra credential patterns
+google-services.json
+service-account*.json
+*.pem
+*.key
+.env.*

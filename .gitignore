@@ -1,0 +1,45 @@
+﻿# Secrets and environment files
+.env
+*.env
+!.env.example
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Node.js
+node_modules/
+dist/
+build/
+
+# Model and application caches
+.hf_cache/
+.cache/
+.pytest_cache/
+.mypy_cache/
+
+# Temporary uploads and logs
+uploads/
+*.log
+*.tmp
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Customer Feedback Intelligence V2 temporary test data
+Week-12/D1 Monday 16-11-2026/CustomerFeedbackApp/V2/data/test_messy.csv

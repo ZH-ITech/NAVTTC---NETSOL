@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Results - Customer Feedback Intelligence V2{% endblock %}
+{% block topright %}
+<div>
+  <a class="btn btn-success btn-sm" href="{{ url_for('download', token=token) }}">Download analysed CSV</a>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('index') }}">Analyse another file</a>
+</div>
+{% endblock %}
+{% block content %}
+<div class="alert alert-info py-2">
+  <strong>Backend actually used: {{ backend_used }}</strong> (requested: {{ backend_requested }}).
+  Sentiment: {{ backends.sentiment }} | Key phrases: {{ backends.key_phrases }} | Categories: {{ backends.categories }}.
+  File: {{ source_name }}.
+</div>
+
+{% for w in report.warnings + warnings %}<div class="alert alert-warning py-2 mb-2">{{ w }}</div>{% endfor %}
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3"><div class="card text-center shadow-sm"><div class="card-body">
+    <div class="text-muted small">Reviews analysed</div><div class="fs-3 fw-semibold">{{ k.total_reviews }}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center shadow-sm"><div class="card-body">
+    <div class="text-muted small">Positive</div><div class="fs-3 fw-semibold text-success">{{ k.percentages.Positive }}%</div>
+    <div class="small text-muted">{{ k.counts.Positive }} reviews</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center shadow-sm"><div class="card-body">
+    <div class="text-muted small">Neutral</div><div class="fs-3 fw-semibold text-secondary">{{ k.percentages.Neutral }}%</div>
+    <div class="small text-muted">{{ k.counts.Neutral }} reviews</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center shadow-sm"><div class="card-body">
+    <div class="text-muted small">Negative</div><div class="fs-3 fw-semibold text-danger">{{ k.percentages.Negative }}%</div>
+    <div class="small text-muted">{{ k.counts.Negative }} reviews</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center shadow-sm"><div class="card-body">
+    <div class="text-muted small">Average sentiment score</div><div class="fs-4 fw-semibold">{{ '%+.3f'|format(k.avg_sentiment_score) }}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center shadow-sm"><div class="card-body">
+    <div class="text-muted small">Net sentiment (pos% - neg%)</div><div class="fs-4 fw-semibold">{{ '%+.1f'|format(k.net_sentiment) }}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center shadow-sm"><div class="card-body">
+    <div class="text-muted small">Reviews with a complaint flag</div><div class="fs-4 fw-semibold">{{ k.complaint_reviews_flagged }}</div>
+    <div class="small text-muted">{{ k.complaints_in_non_negative_reviews }} inside non-negative reviews</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center shadow-sm"><div class="card-body">
+    <div class="text-muted small">Best / weakest product</div>
+    <div class="fw-semibold">{% if k.best_product %}{{ k.best_product.product }} / {{ k.worst_product.product }}{% else %}n/a (one product){% endif %}</div>
+    <div class="small text-muted">by average score</div></div></div></div>
+</div>
+<p class="small text-muted">Classes produced by this backend: {{ k.classes_present|join(', ') }}.</p>
+
+<div id="chart-warning" class="alert alert-warning d-none">Charts could not load (Chart.js comes from a CDN and needs internet). The tables below still show every number.</div>
+<div class="row g-3 mb-3">
+  <div class="col-md-4"><div class="card shadow-sm"><div class="card-header fw-semibold">Overall sentiment</div>
+    <div class="card-body" style="position:relative;height:280px"><canvas id="chartSentiment"></canvas></div></div></div>
+  <div class="col-md-8"><div class="card shadow-sm"><div class="card-header fw-semibold">Sentiment by product (review counts)</div>
+    <div class="card-body" style="position:relative;height:280px"><canvas id="chartProducts"></canvas></div></div></div>
+  <div class="col-md-6"><div class="card shadow-sm"><div class="card-header fw-semibold">Average sentiment score by product</div>
+    <div class="card-body" style="position:relative;height:260px"><canvas id="chartAvg"></canvas></div></div></div>
+  <div class="col-md-6"><div class="card shadow-sm"><div class="card-header fw-semibold">Complaint categories (rule-based, reviews flagged)</div>
+    <div class="card-body" style="position:relative;height:260px"><canvas id="chartCats"></canvas></div></div></div>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Product analytics</div>
+  <div class="table-responsive"><table class="table table-sm table-striped mb-0">
+    <thead><tr><th>Product</th><th>Reviews</th><th>Positive</th><th>Neutral</th><th>Negative</th><th>Negative %</th><th>Avg score</th><th>Top complaint (count)</th></tr></thead>
+    <tbody>
+    {% for p in k.products %}
+      <tr><td>{{ p.product }}</td><td>{{ p.total }}</td><td>{{ p.positive }}</td><td>{{ p.neutral }}</td><td>{{ p.negative }}</td>
+          <td>{{ p.negative_pct }}%</td><td>{{ '%+.3f'|format(p.avg_score) }}</td>
+          <td>{% if p.top_complaint %}{{ p.top_complaint }} ({{ p.top_complaint_count }}){% else %}-{% endif %}</td></tr>
+    {% endfor %}
+    </tbody></table></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6"><div class="card shadow-sm h-100"><div class="card-header fw-semibold">Top key phrases (YAKE)</div>
+    <div class="card-body">{% for p in k.top_key_phrases %}<span class="badge text-bg-info me-1 mb-1">{{ p.phrase }} ({{ p.count }})</span>{% else %}none{% endfor %}</div></div></div>
+  <div class="col-md-6"><div class="card shadow-sm h-100"><div class="card-header fw-semibold">Key phrases in negative reviews</div>
+    <div class="card-body">{% for p in k.top_negative_key_phrases %}<span class="badge text-bg-danger me-1 mb-1">{{ p.phrase }} ({{ p.count }})</span>{% else %}none{% endfor %}</div></div></div>
+</div>
+
+{% if skipped %}
+<div class="card border-warning shadow-sm mb-3">
+  <div class="card-header fw-semibold">Rows skipped ({{ skipped|length }})</div>
+  <ul class="list-group list-group-flush">
+    {% for s in skipped[:20] %}<li class="list-group-item small">CSV row {{ s.csv_row }}: {{ s.reason }}</li>{% endfor %}
+    {% if skipped|length > 20 %}<li class="list-group-item small text-muted">...and {{ skipped|length - 20 }} more.</li>{% endif %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Analysed reviews (showing {{ rows|length }} of {{ row_total }}; the download has all rows)</div>
+  <div class="table-responsive" style="max-height:420px">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light sticky-top"><tr><th>ID</th><th>Product</th><th>Feedback</th><th>Sentiment</th><th>Score</th><th>Key phrases</th><th>Complaint categories</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr><td>{{ r.customer_id }}</td><td>{{ r.product }}</td><td>{{ r.feedback }}</td><td>{{ r.sentiment }}</td>
+            <td>{{ '%+.3f'|format(r.sentiment_score) }}</td><td>{{ r.key_phrases }}</td><td>{{ r.complaint_categories }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card border-secondary-subtle mb-4">
+  <div class="card-body small text-muted">
+    <div class="fw-semibold">Limitations</div>
+    <ul class="mb-0">
+      {% for l in limitations %}<li>{{ l }}</li>{% endfor %}
+      <li>Top complaint per product is the most frequent rule category. Ties are broken by rule order, so read the count: with small samples the ranking is weak.</li>
+      <li>KPIs are calculated in Python from the labels above; they are only as accurate as the sentiment backend and the keyword rules.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="chart-data" type="application/json">{{ chart_data|tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  if (typeof Chart === 'undefined') {
+    document.getElementById('chart-warning').classList.remove('d-none');
+    return;
+  }
+  var d = JSON.parse(document.getElementById('chart-data').textContent);
+  var GREEN = '#198754', GREY = '#6c757d', RED = '#dc3545', BLUE = '#0d6efd', AMBER = '#ffc107';
+  var base = { responsive: true, maintainAspectRatio: false };
+
+  new Chart(document.getElementById('chartSentiment'), {
+    type: 'doughnut',
+    data: { labels: d.sentiment.labels, datasets: [{ data: d.sentiment.values, backgroundColor: [GREEN, GREY, RED] }] },
+    options: base
+  });
+  new Chart(document.getElementById('chartProducts'), {
+    type: 'bar',
+    data: { labels: d.products.labels, datasets: [
+      { label: 'Positive', data: d.products.positive, backgroundColor: GREEN },
+      { label: 'Neutral', data: d.products.neutral, backgroundColor: GREY },
+      { label: 'Negative', data: d.products.negative, backgroundColor: RED } ] },
+    options: Object.assign({}, base, { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } })
+  });
+  new Chart(document.getElementById('chartAvg'), {
+    type: 'bar',
+    data: { labels: d.avg_scores.labels, datasets: [{ label: 'Average score', data: d.avg_scores.values, backgroundColor: BLUE }] },
+    options: Object.assign({}, base, { scales: { y: { min: -1, max: 1 } }, plugins: { legend: { display: false } } })
+  });
+  new Chart(document.getElementById('chartCats'), {
+    type: 'bar',
+    data: { labels: d.categories.labels, datasets: [{ label: 'Reviews flagged', data: d.categories.values, backgroundColor: AMBER }] },
+    options: Object.assign({}, base, { indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false } } })
+  });
+})();
+</script>
+{% endblock %}

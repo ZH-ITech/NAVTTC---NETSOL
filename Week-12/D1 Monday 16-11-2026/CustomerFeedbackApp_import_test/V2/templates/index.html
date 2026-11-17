@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="text-muted">Upload a CSV with the columns <code>customer_id, product, feedback</code>. Every result shows which backend produced it.</p>
+
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+
+<div class="card card-body shadow-sm mb-4">
+  <h2 class="h5">1. Analyse a CSV file</h2>
+  <form method="post" action="{{ url_for('analyze_csv') }}" enctype="multipart/form-data">
+    <label for="file" class="form-label fw-semibold">CSV file</label>
+    <input class="form-control" type="file" id="file" name="file" accept=".csv,text/csv">
+    <div class="form-text">Up to {{ max_rows }} rows and {{ max_mb }} MB. Save Excel files as "CSV UTF-8".</div>
+
+    <label for="backend" class="form-label fw-semibold mt-3">Sentiment backend</label>
+    <select id="backend" name="backend" class="form-select">
+      {% for c in choices %}
+      <option value="{{ c.key }}" {% if not c.available %}disabled{% endif %}
+              {% if c.key == selected_backend and c.available %}selected{% endif %}>
+        {{ c.label }}{% if not c.available %} - not available yet ({{ c.version }}){% endif %}
+      </option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary mt-3">Analyse CSV</button>
+  </form>
+  {% if sample_available %}
+  <form method="post" action="{{ url_for('analyze_csv') }}" class="mt-2">
+    <input type="hidden" name="use_sample" value="1">
+    <input type="hidden" name="backend" value="vader">
+    <button type="submit" class="btn btn-outline-secondary btn-sm">Or use the bundled sample CSV (20 reviews)</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card card-body shadow-sm mb-4">
+  <h2 class="h5">2. Quick check of one review (V1 feature)</h2>
+  <form method="post" action="{{ url_for('single_review') }}">
+    <textarea name="review" rows="3" class="form-control" maxlength="{{ max_chars }}"
+              placeholder="Example: The battery drains very quickly." required>{{ review_text }}</textarea>
+    <input type="hidden" name="backend" value="{{ selected_backend }}">
+    <button type="submit" class="btn btn-outline-primary mt-2">Analyse review</button>
+  </form>
+
+  {% if single_result %}
+  {% set badge = {'Positive': 'success', 'Negative': 'danger', 'Neutral': 'secondary'}[single_result.sentiment.label] %}
+  <hr>
+  <p class="mb-1">Sentiment: <span class="badge text-bg-{{ badge }} fs-6">{{ single_result.sentiment.label }}</span>
+    <span class="text-muted ms-2">score {{ '%+.3f'|format(single_result.sentiment.score) }}</span></p>
+  <p class="mb-1 text-muted">Key phrases:
+    {% for p in single_result.key_phrases %}<span class="badge text-bg-info me-1">{{ p }}</span>{% else %}none{% endfor %}</p>
+  <p class="mb-1 text-muted">Complaint categories:
+    {% for c in single_result.complaint_categories %}<span class="badge text-bg-warning me-1">{{ c }}</span>{% else %}none{% endfor %}</p>
+  {% for w in single_result.warnings %}<div class="alert alert-warning py-2 mb-1">{{ w }}</div>{% endfor %}
+  <p class="small mt-2 mb-0">Backend actually used: <strong>{{ single_result.backend_used }}</strong>
+    ({{ single_result.backends.sentiment }})</p>
+  {% endif %}
+</div>
+{% endblock %}

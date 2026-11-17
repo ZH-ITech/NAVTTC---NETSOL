@@ -1,0 +1,19 @@
+# Secrets
+.env
+*.env
+!.env.example
+
+# Virtual environments
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Local caches and uploads
+.hf_cache/
+uploads/
+
+# Customer Feedback Intelligence V2 - temporary test data
+V2/data/test_messy.csv

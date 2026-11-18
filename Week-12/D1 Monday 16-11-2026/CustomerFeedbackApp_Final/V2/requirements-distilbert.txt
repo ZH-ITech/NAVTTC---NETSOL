@@ -1,0 +1,5 @@
+# Optional DistilBERT backend. Install AFTER requirements.txt:
+#   python -m pip install -r requirements-distilbert.txt --no-cache-dir
+# On Windows this installs the CPU build of PyTorch.
+torch==2.15.0
+transformers==5.23.0

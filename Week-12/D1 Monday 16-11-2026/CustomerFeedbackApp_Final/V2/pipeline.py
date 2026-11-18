@@ -1,9 +1,9 @@
-"""Run the V1 single-review analysis over every row of a feedback DataFrame."""
+"""Run the single-review analysis over every row of a feedback DataFrame."""
 import logging
 
 import pandas as pd
 
-from analysis import LIMITATIONS, SENTIMENT_BACKENDS, InvalidReviewError, analyze_review
+from analysis import InvalidReviewError, analyze_review, limitations_for, resolve_backend
 
 log = logging.getLogger("feedback-pipeline")
 
@@ -15,12 +15,14 @@ OUTPUT_COLUMNS = [
 
 
 def analyze_dataframe(df: pd.DataFrame, backend: str = "vader") -> dict:
-    records, skipped, warnings = [], [], set()
-    labels, used = None, None
+    # Decide the backend ONCE so a whole dataset is never a mix of two backends.
+    used, warnings = resolve_backend(backend)
+    warnings = set(warnings)
+    records, skipped, labels = [], [], None
 
     for row in df.itertuples(index=False):
         try:
-            r = analyze_review(row.feedback, backend=backend)
+            r = analyze_review(row.feedback, backend=used)
         except InvalidReviewError as exc:
             skipped.append({"csv_row": int(row.csv_row), "reason": str(exc)})
             continue
@@ -29,7 +31,6 @@ def analyze_dataframe(df: pd.DataFrame, backend: str = "vader") -> dict:
             skipped.append({"csv_row": int(row.csv_row), "reason": "Unexpected analysis error."})
             continue
 
-        used = r["backend_used"]
         labels = labels or r["backends"]
         warnings.update(r["warnings"])
         records.append({
@@ -40,15 +41,15 @@ def analyze_dataframe(df: pd.DataFrame, backend: str = "vader") -> dict:
             "sentiment_score": float(r["sentiment"]["score"]),
             "key_phrases": "; ".join(r["key_phrases"]),
             "complaint_categories": "; ".join(r["complaint_categories"]),
-            "backend_used": used,
+            "backend_used": r["backend_used"],
         })
 
     return {
         "results": pd.DataFrame(records, columns=OUTPUT_COLUMNS),
         "skipped": skipped,
         "backend_requested": backend,
-        "backend_used": used or (backend if backend in SENTIMENT_BACKENDS else "vader"),
+        "backend_used": used,
         "backends": labels or {},
         "warnings": sorted(warnings),
-        "limitations": LIMITATIONS,
+        "limitations": limitations_for(used),
     }

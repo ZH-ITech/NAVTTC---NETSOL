@@ -35,5 +35,6 @@ for bad in ["", "   ", "a", "12345 !!!", "x" * 1001]:
         print("Rejected as expected:", exc)
 
 print()
-r = analyze_review("Great phone", backend="distilbert")
+r = analyze_review("Great phone", backend="azure")
 print("Unavailable backend test ->", r["backend_used"], "|", r["warnings"])
+

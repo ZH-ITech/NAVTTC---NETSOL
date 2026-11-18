@@ -37,6 +37,21 @@ Features:
 - Application health-check endpoint.
 - Configurable upload, row-count, and review-length limits.
 
+## Optional DistilBERT Backend (V2b)
+
+V2 can optionally use DistilBERT (`distilbert-base-uncased-finetuned-sst-2-english`) instead of VADER. It is local and optional, and needs PyTorch (about 1.6 GB including the model cache).
+
+Install it from the V2 folder with `python -m pip install -r requirements-distilbert.txt --no-cache-dir`.
+
+- DistilBERT is an English **binary** model. It returns Positive or Negative only, never Neutral, so the dashboard shows Neutral as `n/a` for this backend.
+- It was fine-tuned on movie-review sentences, not product reviews, and its confidence is not a measure of correctness.
+- The model downloads once into `V2/.hf_cache` (ignored by Git) and then runs offline.
+- If DistilBERT cannot load, the whole dataset falls back to VADER and the results page says so.
+- The **Compare VADER and DistilBERT** page shows both backends side by side. It measures agreement, not accuracy, because no human-labelled ground truth exists.
+- The average score is backend-specific (VADER compound score versus DistilBERT signed confidence) and the two are not comparable.
+
+Extra tests, run from `V2`: `python smoke_test_distilbert.py` and `python smoke_test_v2b_web.py`.
+
 ## Technology Stack
 
 | Technology | Purpose |

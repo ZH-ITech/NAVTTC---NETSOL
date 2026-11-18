@@ -8,7 +8,8 @@ from collections import OrderedDict
 from flask import Flask, Response, jsonify, redirect, render_template, request, url_for
 from werkzeug.utils import secure_filename
 
-from analysis import SENTIMENT_BACKENDS, InvalidReviewError, analyze_review
+from analysis import BACKEND_CLASSES, SENTIMENT_BACKENDS, InvalidReviewError, analyze_review
+from comparison import ComparisonUnavailable, build_comparison
 from config import BASE_DIR, FLASK_DEBUG, MAX_REVIEW_CHARS, MAX_ROWS, MAX_UPLOAD_MB
 from data_loader import CSVValidationError, load_feedback_csv
 from kpis import LABELS, compute_kpis
@@ -29,11 +30,17 @@ TOKEN_RE = re.compile(r"^[0-9a-f]{32}$")
 RESULT_STORE = OrderedDict()
 STORE_LOCK = threading.Lock()
 
-BACKEND_CHOICES = [
-    ("vader", "VADER (local, low-spec)", "V2b"),
-    ("distilbert", "DistilBERT (local, English positive/negative)", "V2b"),
-    ("azure", "Azure AI Language (needs valid access)", "V3"),
-]
+
+def backend_choices() -> list:
+    return [
+        {"key": "vader", "label": "VADER (local, low-spec)",
+         "available": "vader" in SENTIMENT_BACKENDS, "version": ""},
+        {"key": "distilbert",
+         "label": "DistilBERT (local, English, Positive/Negative only; first use loads the model)",
+         "available": "distilbert" in SENTIMENT_BACKENDS, "version": "install requirements-distilbert.txt"},
+        {"key": "azure", "label": "Azure AI Language (needs valid access)",
+         "available": "azure" in SENTIMENT_BACKENDS, "version": "V3"},
+    ]
 
 
 def store_result(payload: dict) -> str:
@@ -54,10 +61,7 @@ def get_result(token: str):
 
 def base_context() -> dict:
     return {
-        "choices": [
-            {"key": k, "label": label, "available": k in SENTIMENT_BACKENDS, "version": ver}
-            for k, label, ver in BACKEND_CHOICES
-        ],
+        "choices": backend_choices(),
         "max_chars": MAX_REVIEW_CHARS,
         "max_rows": MAX_ROWS,
         "max_mb": MAX_UPLOAD_MB,
@@ -146,6 +150,7 @@ def analyze_csv():
         "warnings": out["warnings"], "limitations": out["limitations"],
         "backend_requested": out["backend_requested"], "backend_used": out["backend_used"],
         "backends": out["backends"], "source_name": display_name,
+        "input": df, "compare": None,
     })
     return redirect(url_for("results", token=token), code=303)
 
@@ -168,7 +173,31 @@ def results(token):
         chart_data=chart_payload(data["kpis"]),
         rows=frame.head(MAX_TABLE_ROWS).to_dict("records"),
         row_total=len(frame), max_rows_shown=MAX_TABLE_ROWS,
+        neutral_supported="Neutral" in BACKEND_CLASSES.get(data["backend_used"], ["Neutral"]),
+        compare_available="distilbert" in SENTIMENT_BACKENDS,
     )
+
+
+@app.get("/compare/<token>")
+def compare(token):
+    data = get_result(token)
+    if data is None:
+        return render_index_error("That analysis is no longer available. Please upload the file again.", status=404)
+    if "distilbert" not in SENTIMENT_BACKENDS:
+        return render_index_error(
+            "Comparing backends needs the optional DistilBERT backend. Install requirements-distilbert.txt first.")
+    comparison = data.get("compare")
+    if comparison is None:
+        try:
+            comparison = build_comparison(data["input"])
+        except ComparisonUnavailable as exc:
+            return render_index_error(str(exc))
+        except Exception:
+            log.exception("Unexpected error while comparing backends")
+            return render_index_error("Something went wrong while comparing the backends.", status=500)
+        with STORE_LOCK:
+            data["compare"] = comparison
+    return render_template("compare.html", token=token, cmp=comparison, source_name=data["source_name"])
 
 
 @app.get("/download/<token>")

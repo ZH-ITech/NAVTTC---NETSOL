@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Backend comparison - Customer Feedback Intelligence V2{% endblock %}
+{% block topright %}
+<div>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('results', token=token) }}">Back to results</a>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('index') }}">Analyse another file</a>
+</div>
+{% endblock %}
+{% block content %}
+{% set v = cmp.kpis.vader %}
+{% set d = cmp.kpis.distilbert %}
+{% set a = cmp.agreement %}
+<h2 class="h5">Backend comparison <span class="text-muted fs-6">({{ source_name }})</span></h2>
+<div class="alert alert-info py-2 small">
+  Both backends analysed the same {{ a.rows_compared }} reviews.<br>
+  <strong>VADER:</strong> {{ cmp.labels.vader }}<br>
+  <strong>DistilBERT:</strong> {{ cmp.labels.distilbert }}
+</div>
+<div class="alert alert-warning py-2 small">
+  This page measures <strong>agreement</strong> between two backends, not <strong>accuracy</strong>: no human-labelled answers exist for this file.
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Same KPIs, two backends</div>
+  <div class="table-responsive"><table class="table table-sm table-striped mb-0">
+    <thead><tr><th>KPI</th><th>VADER</th><th>DistilBERT</th></tr></thead>
+    <tbody>
+      <tr><td>Reviews analysed</td><td>{{ v.total_reviews }}</td><td>{{ d.total_reviews }}</td></tr>
+      <tr><td>Positive</td><td>{{ v.counts.Positive }} ({{ v.percentages.Positive }}%)</td><td>{{ d.counts.Positive }} ({{ d.percentages.Positive }}%)</td></tr>
+      <tr><td>Neutral</td><td>{{ v.counts.Neutral }} ({{ v.percentages.Neutral }}%)</td><td class="text-muted">n/a (binary model)</td></tr>
+      <tr><td>Negative</td><td>{{ v.counts.Negative }} ({{ v.percentages.Negative }}%)</td><td>{{ d.counts.Negative }} ({{ d.percentages.Negative }}%)</td></tr>
+      <tr><td>Net sentiment (pos% - neg%)</td><td>{{ '%+.1f'|format(v.net_sentiment) }}</td><td>{{ '%+.1f'|format(d.net_sentiment) }}</td></tr>
+      <tr><td>Average score <span class="text-muted small">(different scales: not comparable)</span></td>
+          <td>{{ '%+.3f'|format(v.avg_sentiment_score) }}</td><td>{{ '%+.3f'|format(d.avg_sentiment_score) }}</td></tr>
+      <tr><td>Weakest product (by average score)</td>
+          <td>{% if v.worst_product %}{{ v.worst_product.product }}{% else %}n/a{% endif %}</td>
+          <td>{% if d.worst_product %}{{ d.worst_product.product }}{% else %}n/a{% endif %}</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Negative reviews by product (%)</div>
+  <div class="card-body" style="position:relative;height:280px"><canvas id="chartCompare"></canvas></div>
+</div>
+<div id="chart-warning" class="alert alert-warning d-none">Charts could not load (Chart.js needs internet). The tables still show every number.</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Agreement</div>
+  <div class="card-body">
+    <p class="mb-1">Reviews where VADER gave Positive or Negative: <strong>{{ a.comparable }}</strong>.
+       DistilBERT agreed on <strong>{{ a.agree }}</strong> ({{ a.agree_pct }}%) and disagreed on <strong>{{ a.disagree }}</strong>.</p>
+    <p class="mb-0 small text-muted">{{ a.vader_neutral }} review(s) were Neutral under VADER, so they cannot be compared directly; DistilBERT must place them in Positive or Negative (listed below).</p>
+  </div>
+</div>
+
+{% if cmp.disagreements %}
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Reviews where the backends disagree</div>
+  <div class="table-responsive"><table class="table table-sm mb-0">
+    <thead><tr><th>ID</th><th>Product</th><th>Feedback</th><th>VADER</th><th>DistilBERT</th></tr></thead>
+    <tbody>{% for r in cmp.disagreements %}<tr><td>{{ r.customer_id }}</td><td>{{ r.product }}</td><td>{{ r.feedback }}</td><td>{{ r.vader }}</td><td>{{ r.distilbert }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endif %}
+
+{% if cmp.vader_neutral_rows %}
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Reviews VADER called Neutral</div>
+  <div class="table-responsive"><table class="table table-sm mb-0">
+    <thead><tr><th>ID</th><th>Product</th><th>Feedback</th><th>VADER</th><th>DistilBERT</th></tr></thead>
+    <tbody>{% for r in cmp.vader_neutral_rows %}<tr><td>{{ r.customer_id }}</td><td>{{ r.product }}</td><td>{{ r.feedback }}</td><td>{{ r.vader }}</td><td>{{ r.distilbert }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endif %}
+
+<div class="card border-secondary-subtle mb-4">
+  <div class="card-body small text-muted">
+    <div class="fw-semibold">Limitations of both backends</div>
+    <ul class="mb-0">
+      {% for l in cmp.limitations.vader %}<li>{{ l }}</li>{% endfor %}
+      {% for l in cmp.limitations.distilbert %}<li>{{ l }}</li>{% endfor %}
+      <li>Agreement between two imperfect backends can still be wrong. Check a sample of reviews by hand before relying on either.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="chart-data" type="application/json">{{ cmp.chart|tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  if (typeof Chart === 'undefined') {
+    document.getElementById('chart-warning').classList.remove('d-none');
+    return;
+  }
+  var d = JSON.parse(document.getElementById('chart-data').textContent);
+  new Chart(document.getElementById('chartCompare'), {
+    type: 'bar',
+    data: { labels: d.products, datasets: [
+      { label: 'VADER', data: d.vader_negative_pct, backgroundColor: '#0d6efd' },
+      { label: 'DistilBERT', data: d.distilbert_negative_pct, backgroundColor: '#fd7e14' } ] },
+    options: { responsive: true, maintainAspectRatio: false,
+               scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '% of reviews labelled Negative' } } } }
+  });
+})();
+</script>
+{% endblock %}

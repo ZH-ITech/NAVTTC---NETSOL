@@ -61,10 +61,10 @@ check("Download keeps the schema + result columns",
 sample_rows = HDR + b"C1,Laptop,Great battery life\nC2,Mobile,The screen is dim\n"
 r = upload(sample_rows, "my reviews.csv", follow_redirects=True)
 check("Upload works and filename is sanitised", r.status_code == 200 and b"my_reviews.csv" in r.data)
-r = upload(sample_rows, backend="distilbert", follow_redirects=True)
+r = upload(sample_rows, backend="azure", follow_redirects=True)
 h = r.get_data(as_text=True)
 check("Unavailable backend falls back and says so",
-      "Backend actually used: vader" in h and "requested: distilbert" in h and "not available" in h)
+      "Backend actually used: vader" in h and "requested: azure" in h and "not available" in h)
 
 # --- security: HTML escaping and spreadsheet-formula protection ---
 evil = HDR + b'C1,Laptop,"<script>alert(1)</script> bad product"\nC2,Mobile,=1+1 formula test\n'
@@ -103,3 +103,4 @@ check("Single review validation message", b"must contain some letters" in r.data
 
 print()
 print(f"{sum(results)} of {len(results)} checks passed")
+

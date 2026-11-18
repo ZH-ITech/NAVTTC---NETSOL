@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Executive Report - Customer Feedback Intelligence V3{% endblock %}
+
+{% block topright %}
+<div class="d-flex flex-wrap gap-2">
+  <a class="btn btn-outline-secondary btn-sm"
+     href="{{ url_for('results', token=token) }}">Back to dashboard</a>
+  <a class="btn btn-success btn-sm"
+     href="{{ url_for('download_executive_report', token=token, backend=selected_backend) }}">
+     Download Markdown
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <h2 class="h4 mb-1">Executive Feedback Intelligence Report</h2>
+      <p class="text-muted mb-1">Business-focused analysis of customer feedback.</p>
+      <div class="small text-muted">
+        Source: {{ source_name }} |
+        Reviews analysed: {{ facts.dataset.reviews_analysed }} |
+        Sentiment backend: {{ facts.dataset.sentiment_backend }}
+      </div>
+    </div>
+    <span class="badge text-bg-primary">{{ report.label }}</span>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <form method="get" action="{{ url_for('executive_report', token=token) }}"
+          class="row align-items-end g-3">
+      <div class="col-md-6">
+        <label for="backend" class="form-label fw-semibold">Report generation method</label>
+        <select class="form-select" name="backend" id="backend">
+          <option value="template" {% if selected_backend == 'template' %}selected{% endif %}>
+            Template-based (offline)
+          </option>
+          <option value="auto" {% if selected_backend == 'auto' %}selected{% endif %}>
+            Automatic (OpenAI if configured, otherwise template)
+          </option>
+          <option value="openai" {% if selected_backend == 'openai' %}selected{% endif %}>
+            OpenAI (template fallback if unavailable)
+          </option>
+        </select>
+      </div>
+      <div class="col-md-auto">
+        <button class="btn btn-primary" type="submit">Generate report</button>
+      </div>
+    </form>
+    <p class="small text-muted mb-0 mt-2">
+      The report uses aggregated Python-calculated facts. Raw customer reviews and
+      customer IDs are not sent to the report generator.
+    </p>
+  </div>
+</div>
+
+{% for warning in report.warnings %}
+<div class="alert alert-warning py-2">{{ warning }}</div>
+{% endfor %}
+
+{% if facts.dataset.sample_size_warning %}
+<div class="alert alert-warning py-2">{{ facts.dataset.sample_size_warning }}</div>
+{% endif %}
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Executive headline</div>
+  <div class="card-body">
+    <p class="mb-0 fs-5">{{ report.sections.headline }}</p>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Key findings</div>
+  <div class="card-body">
+    <ul class="mb-0">
+      {% for item in report.sections.findings %}
+      <li class="mb-2">{{ item }}</li>
+      {% else %}
+      <li>No findings available.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Complaint analysis</div>
+  <div class="card-body">
+    <ul class="mb-0">
+      {% for item in report.sections.complaints %}
+      <li class="mb-2">{{ item }}</li>
+      {% else %}
+      <li>No complaint analysis available.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Recommendations</div>
+  <div class="card-body">
+    <ul class="mb-0">
+      {% for item in report.sections.recommendations %}
+      <li class="mb-2">{{ item }}</li>
+      {% else %}
+      <li>No recommendations available.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Calculated sentiment snapshot</div>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped mb-0">
+      <thead><tr><th>Metric</th><th>Calculated value</th></tr></thead>
+      <tbody>
+        <tr><td>Reviews analysed</td><td>{{ facts.dataset.reviews_analysed }}</td></tr>
+        <tr><td>Positive</td><td>{{ facts.sentiment.positive.pct }}%</td></tr>
+        <tr>
+          <td>Neutral</td>
+          <td>{% if facts.sentiment.neutral is not none %}
+            {{ facts.sentiment.neutral.pct }}%
+            {% else %}Not supported by this backend{% endif %}
+          </td>
+        </tr>
+        <tr><td>Negative</td><td>{{ facts.sentiment.negative.pct }}%</td></tr>
+        <tr><td>Net sentiment</td><td>{{ facts.sentiment.net_sentiment }}</td></tr>
+        <tr>
+          <td>Reviews with complaint flags</td>
+          <td>{{ facts.complaints.reviews_with_complaint_flag }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if facts.products %}
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Product performance</div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead><tr>
+        <th>Product</th><th>Reviews</th><th>Positive</th>
+        <th>Negative</th><th>Negative %</th><th>Top complaint</th>
+      </tr></thead>
+      <tbody>
+      {% for product in facts.products %}
+        <tr>
+          <td>{{ product.product }}</td>
+          <td>{{ product.reviews }}</td>
+          <td>{{ product.positive }}</td>
+          <td>{{ product.negative }}</td>
+          <td>{{ product.negative_pct }}%</td>
+          <td>{{ product.top_complaint or 'None identified' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Caveats and limitations</div>
+  <div class="card-body">
+    <ul class="mb-0">
+      {% for item in report.sections.caveats %}
+      <li class="mb-2">{{ item }}</li>
+      {% else %}
+      <li>No additional caveats supplied.</li>
+      {% endfor %}
+      {% for item in facts.limitations %}
+      <li class="mb-2">{{ item }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header fw-semibold">Numerical validation</div>
+  <div class="card-body">
+    {% if report.figure_check.ok %}
+      <div class="text-success fw-semibold">Passed</div>
+    {% else %}
+      <div class="text-danger fw-semibold">Review required</div>
+    {% endif %}
+    <p class="small mb-1">
+      Numbers checked: {{ report.figure_check.numbers_checked }}
+    </p>
+    {% if report.figure_check.unverified %}
+    <p class="small text-danger mb-0">
+      Unverified figures: {{ report.figure_check.unverified|join(', ') }}
+    </p>
+    {% endif %}
+  </div>
+</div>
+
+<p class="small text-muted">
+  This report is generated from aggregated analysis results. It does not include
+  customer IDs or raw review text.
+</p>
+{% endblock %}
